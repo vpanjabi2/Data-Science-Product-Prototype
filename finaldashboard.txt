@@ -1,0 +1,142 @@
+library(lubridate)
+library(stringr)
+library(shinydashboardPlus)
+library(shinydashboard)
+library(shiny)
+library(ggplot2)
+library(dplyr)
+
+#read files
+df1<-read.csv("~/Desktop/GSPC.csv")
+df3<-read.csv("~/Desktop/HSI.csv",stringsAsFactors=FALSE)
+df2<-read.csv("~/Desktop/IXIC.csv")
+
+#Convert to date
+df1$Date <- as.Date(df1$Date)
+df2$Date <- as.Date(df2$Date)
+df3$Date <- as.Date(df3$Date)
+
+#replace nulls with 0 
+#df3[df3=="null"] <- 0
+#df3<-df3 %>%
+#  filter(Open>0)
+
+df3$Open<-as.numeric(df3$Open)
+df3$High<-as.numeric(df3$High)
+df3$Low<-as.numeric(df3$Low)
+df3$Close<-as.numeric(df3$Close)
+df3$Adj.Close<-as.numeric(df3$Adj.Close)
+df3$Volume<-as.numeric(df3$Volume)
+
+#Dashboard
+
+ui <- dashboardPage(
+    dashboardHeader(title = "Stock Index Dashboard"),
+    dashboardSidebar(
+        sidebarMenu(
+            menuItem("Analytics", tabName = "analytics"),
+            menuItem("Data Table", tabName = "datatable"),
+            menuItem("Prediction", tabName = "prediction"),
+            menuItem("Financial ratios", tabName = "financialratios")
+        )),
+    dashboardBody(
+        tabItems(
+            tabItem(tabName = "analytics",
+                    fluidRow(
+                        box(
+                            column(12,align="center",plotOutput("plot1", height = 350)),
+                            column(12,align="center",sliderInput("sliderA","",
+                                                                 min=min(as.Date(df1$Date)), max=max(as.Date(df1$Date)), 
+                                                                 value = c(min(as.Date(df1$Date)),max(as.Date(df1$Date)))))
+                        ),
+                        box(radioButtons("scenario", label=h4("Choose an Index",style = "font-family:'Heebo', sans-serif;
+                           font-weight: 500; line-height: 1.1; 
+                           color: #0D445E"),
+                                         choiceNames = list(
+                                             tags$span(style = "color:black", "S&P 500"), 
+                                             tags$span(style = "color:black", "NASDAQ"), 
+                                             tags$span(style = "color:black","Hang Seng")),
+                                         choiceValues = c("sp", "na", "hs")
+                        ),
+                        selectInput("variable", label=h4("Select a variable to plot",style = "font-family:'Heebo', sans-serif;
+                           font-weight: 500; line-height: 1.1; 
+                           color: #0D445E"),
+                                    choices =c("Open","High","Low","Close","Adj.Close","Volume"), 
+                                    multiple=FALSE))
+                    ) #fluidrow
+            ) #tab item - main 
+        )#tab items
+    ) #dashboard body
+) #dashboard page
+
+
+
+server <- function(input, output) { 
+    
+    output$plot1 <- renderPlot({
+        
+        if(input$scenario == "sp"){
+            df_2<- reactive({
+                df1 %>% dplyr::filter(between(Date, input$sliderA[1],input$sliderA[2]))
+            })
+            
+            ggplot(df_2(),aes_string(x="Date", y=input$variable)) +
+                geom_line(size=1, color="#59bcd1")+
+                ggtitle("Index Evolution Over Time")+
+                theme(panel.background = element_blank(),
+                      plot.title = element_text(size=16, face="bold",hjust = 0.5),
+                      legend.position="top",
+                      axis.ticks = element_blank(),
+                      axis.title = element_blank(),
+                      axis.text.x = element_text(face = "bold",size = 11 ,angle = 45),
+                      axis.text.y = element_text(face = "bold",size = 12),
+                      legend.background = element_rect(fill = "white"),legend.key = element_rect(fill = "white"),
+                      legend.title = element_blank())
+        }
+        
+        else if(input$scenario == "na"){
+            
+            df_2<- reactive({
+                df2 %>% dplyr::filter(between(Date, input$sliderA[1],input$sliderA[2]))
+            })
+            
+            ggplot(df_2(),aes_string(x="Date", y=input$variable)) +
+                geom_line(size=1)+
+                ggtitle("Index Evolution Over Time")+
+                theme(panel.background = element_blank(),
+                      plot.title = element_text(size=16, face="bold",hjust = 0.5),
+                      legend.position="top",
+                      axis.ticks = element_blank(),
+                      axis.title = element_blank(),
+                      axis.text.x = element_text(face = "bold",size = 11 ,angle = 45),
+                      axis.text.y = element_text(face = "bold",size = 12),
+                      legend.background = element_rect(fill = "white"),legend.key = element_rect(fill = "white"),
+                      legend.title = element_blank())
+        }
+        
+        else{
+            
+            df_2<- reactive({
+                df3 %>% dplyr::filter(between(Date, input$sliderA[1],input$sliderA[2]))
+            })
+            
+            ggplot(df_2(),aes_string(x="Date", y=input$variable)) +
+                geom_line(size=1)+
+                ggtitle("Index Evolution Over Time")+
+                theme(panel.background = element_blank(),
+                      plot.title = element_text(size=16, face="bold",hjust = 0.5),
+                      legend.position="top",
+                      axis.ticks = element_blank(),
+                      axis.title = element_blank(),
+                      axis.text.x = element_text(face = "bold",size = 11 ,angle = 45),
+                      axis.text.y = element_text(face = "bold",size = 12),
+                      legend.background = element_rect(fill = "white"),legend.key = element_rect(fill = "white"),
+                      legend.title = element_blank())
+            
+        }
+        
+    })
+    
+}
+
+shinyApp(ui, server, options = list(height = 1080))
